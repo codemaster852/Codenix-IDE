@@ -2,7 +2,7 @@
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { FileNode, ConsoleLog, ChatMessage } from './types';
 import { sendMessageToModel } from './services/codenixService';
-import { FileIcon, PlayIcon, ShareIcon, UploadCloudIcon, SparklesIcon, CopyIcon, DownloadIcon, FolderPlusIcon, TrashIcon, TerminalIcon, MessageSquareIcon, SendIcon, RefreshCwIcon, ExpandIcon, MinimizeIcon } from './components/icons';
+import { FileIcon, PlayIcon, ShareIcon, UploadCloudIcon, SparklesIcon, CopyIcon, DownloadIcon, FolderPlusIcon, TrashIcon, TerminalIcon, MessageSquareIcon, SendIcon, RefreshCwIcon, ExpandIcon, MinimizeIcon, MenuIcon, XIcon, CodeIcon } from './components/icons';
 
 // --- Reusable UI Components ---
 
@@ -14,15 +14,23 @@ interface FileExplorerProps {
   renamingFile: string | null;
   onRenameStart: (fileName: string) => void;
   onRenameConfirm: (oldName: string, newName: string) => void;
+  onClose?: () => void;
 }
 
-const FileExplorer: React.FC<FileExplorerProps> = ({ files, activeFile, onFileSelect, onAddFile, renamingFile, onRenameStart, onRenameConfirm }) => (
-  <div className="bg-gray-900/70 backdrop-blur-sm border-r border-gray-700/50 p-4 flex flex-col h-full">
+const FileExplorer: React.FC<FileExplorerProps> = ({ files, activeFile, onFileSelect, onAddFile, renamingFile, onRenameStart, onRenameConfirm, onClose }) => (
+  <div className="bg-gray-900/70 backdrop-blur-sm md:border-r border-gray-700/50 p-4 flex flex-col h-full">
     <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold text-gray-300">File Explorer</h2>
-        <button onClick={onAddFile} className="p-1.5 rounded-md hover:bg-gray-700 transition-colors" title="Add new file">
-            <FolderPlusIcon className="w-5 h-5 text-gray-400"/>
-        </button>
+        <div className="flex items-center">
+            <button onClick={onAddFile} className="p-1.5 rounded-md hover:bg-gray-700 transition-colors" title="Add new file">
+                <FolderPlusIcon className="w-5 h-5 text-gray-400"/>
+            </button>
+            {onClose && (
+                <button onClick={onClose} className="p-1.5 rounded-md hover:bg-gray-700 transition-colors md:hidden" title="Close Explorer">
+                    <XIcon className="w-5 h-5 text-gray-400" />
+                </button>
+            )}
+        </div>
     </div>
     <div className="flex-grow overflow-y-auto">
       {files.length === 0 ? (
@@ -53,7 +61,7 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ files, activeFile, onFileSe
                   title="Double-click to rename"
                 >
                   <FileIcon className="w-4 h-4 text-gray-500" />
-                  <span>{file.name}</span>
+                  <span className="truncate">{file.name}</span>
                 </button>
               )}
             </li>
@@ -139,7 +147,7 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ content, onContentChange, fileN
     return (
         <div className="flex-1 flex flex-col bg-gray-800/50 overflow-hidden">
             <div className="bg-gray-900/80 px-4 py-2 border-b border-gray-700/50">
-                <h3 className="text-sm text-gray-300">{fileName || 'No file selected'}</h3>
+                <h3 className="text-sm text-gray-300 truncate">{fileName || 'No file selected'}</h3>
             </div>
             <div className="flex-1 w-full relative group">
                 <textarea
@@ -295,15 +303,33 @@ const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'preview' | 'chat'>('chat');
   const [previewKey, setPreviewKey] = useState<number>(0);
   
-  // State for resizable panels
+  // State for responsive and resizable panels
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [isExplorerVisible, setIsExplorerVisible] = useState(false);
+  const [mobileMainView, setMobileMainView] = useState<'editor' | 'preview'>('editor');
   const [explorerWidth, setExplorerWidth] = useState(256);
-  const [rightPanelWidth, setRightPanelWidth] = useState(window.innerWidth * 0.33);
+  const [rightPanelWidth, setRightPanelWidth] = useState(window.innerWidth * 0.4);
   const [consoleHeight, setConsoleHeight] = useState(0); // Initially hidden
-  const [isConsoleVisible, setIsConsoleVisible] = useState(false);
   const [isPreviewFullScreen, setIsPreviewFullScreen] = useState(false);
   
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      if (!mobile) {
+        setIsExplorerVisible(false); // Close drawer when switching to desktop view
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const handleFileSelect = (fileName: string) => {
     setActiveFile(fileName);
+    if(isMobile) {
+      setIsExplorerVisible(false);
+      setMobileMainView('editor');
+    }
   };
 
   const handleContentChange = (newContent: string) => {
@@ -322,9 +348,9 @@ const App: React.FC = () => {
     
     if (response.success === false) {
       setChatHistory(prev => [...prev, { sender: 'ai', content: response.error, isError: true }]);
-      setIsConsoleVisible(true);
       setConsoleHeight(192); // Show console on error
       setActiveTab('chat');
+      setMobileMainView('preview');
       return;
     }
     const aiResponseContent = response.message;
@@ -336,7 +362,8 @@ const App: React.FC = () => {
     });
     setActiveFile('content');
     setActiveTab('preview');
-  }, [message]);
+    setMobileMainView('preview');
+  }, [message, isMobile]);
 
   const handleAddNewFile = () => {
     const fileName = window.prompt("Enter the name for the new file (e.g., 'about.html', 'utils.js'):");
@@ -348,6 +375,7 @@ const App: React.FC = () => {
         const newFile: FileNode = { name: fileName, content: '', type: 'file' };
         setFiles(prevFiles => [...prevFiles, newFile]);
         setActiveFile(fileName);
+        if (isMobile) setIsExplorerVisible(false);
     }
   };
 
@@ -384,7 +412,7 @@ const App: React.FC = () => {
 
   const previewContent = useMemo(() => {
     const htmlFile = files.find(f => f.name === 'content') || files.find(f => f.name.endsWith('.html'));
-    if (!htmlFile) return '<h1>No HTML file found to preview.</h1>';
+    if (!htmlFile) return '<h1>No HTML file found to preview.</h1><p>Ask the AI to generate a complete webpage.</p>';
     const cssFiles = files.filter(f => f.name.endsWith('.css'));
     const jsFiles = files.filter(f => f.name.endsWith('.js'));
     const styles = cssFiles.map(f => `<style>${f.content}</style>`).join('\n');
@@ -410,46 +438,65 @@ const App: React.FC = () => {
   }, [isPreviewFullScreen]);
 
   const toggleConsole = () => {
-    setIsConsoleVisible(prev => {
-        setConsoleHeight(prev ? 0 : 192);
-        return !prev;
-    });
+    setConsoleHeight(prev => (prev > 0 ? 0 : 192));
   };
 
   return (
     <div className="h-screen w-screen flex flex-col bg-gradient-to-br from-gray-900 to-gray-800 text-gray-200 overflow-hidden">
       <header className="flex items-center justify-between p-3 bg-gray-900/80 backdrop-blur-sm border-b border-gray-700/50 shadow-md z-30">
         <div className="flex items-center gap-3">
-          <SparklesIcon className="w-6 h-6 text-blue-400" />
-          <h1 className="text-xl font-bold tracking-wider">Codenix IDE</h1>
-          <span className="text-xs bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded-full">Nix 1.5</span>
+          <button onClick={() => setIsExplorerVisible(v => !v)} className="p-1 md:hidden">
+            <MenuIcon className="w-6 h-6 text-gray-300" />
+          </button>
+          <SparklesIcon className="w-6 h-6 text-blue-400 hidden sm:block" />
+          <h1 className="text-xl font-bold tracking-wider">Codenix</h1>
+          <span className="text-xs bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded-full hidden sm:block">Nix 1.5</span>
         </div>
         <div className="flex items-center gap-2">
             <button onClick={handleDownloadProject} disabled={files.length === 0} className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md transition-colors bg-gray-600/50 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed">
-                <DownloadIcon className="w-4 h-4" /> Download
+                <DownloadIcon className="w-4 h-4" /> <span className="hidden sm:inline">Download</span>
             </button>
         </div>
       </header>
       
-      <main className="flex flex-1 overflow-hidden">
-        <div style={{ width: `${explorerWidth}px` }}>
+      <main className="flex flex-1 overflow-hidden relative">
+        {isMobile && isExplorerVisible && <div onClick={() => setIsExplorerVisible(false)} className="fixed inset-0 bg-black/60 z-30" />}
+        <div 
+            style={{ width: isMobile ? '288px' : `${explorerWidth}px` }}
+            className={`h-full transition-transform duration-300 ease-in-out ${isMobile ? 'fixed z-40' : 'relative'} ${isExplorerVisible || !isMobile ? 'translate-x-0' : '-translate-x-full'}`}
+        >
             <FileExplorer 
                 files={files} activeFile={activeFile} onFileSelect={handleFileSelect} 
                 onAddFile={handleAddNewFile} renamingFile={renamingFile}
                 onRenameStart={setRenamingFile} onRenameConfirm={handleRenameFile}
+                onClose={() => setIsExplorerVisible(false)}
             />
         </div>
-        <div className="relative">
+        <div className="relative hidden md:block">
             <Resizer direction="horizontal" onDrag={(dx) => setExplorerWidth(w => Math.max(200, w + dx))} />
         </div>
         
         <div className="flex-1 flex flex-col min-w-0">
+          {isMobile && (
+            <div className="flex border-b border-gray-700/50">
+              <button onClick={() => setMobileMainView('editor')} className={`flex-1 flex items-center justify-center gap-2 p-2 text-sm font-medium transition-colors ${mobileMainView === 'editor' ? 'bg-gray-700 text-white' : 'text-gray-400 hover:bg-gray-800'}`}>
+                <CodeIcon className="w-4 h-4" /> Editor
+              </button>
+              <button onClick={() => setMobileMainView('preview')} className={`flex-1 flex items-center justify-center gap-2 p-2 text-sm font-medium transition-colors ${mobileMainView === 'preview' ? 'bg-gray-700 text-white' : 'text-gray-400 hover:bg-gray-800'}`}>
+                <PlayIcon className="w-4 h-4" /> Preview / Chat
+              </button>
+            </div>
+          )}
           <div className="flex-1 flex overflow-hidden">
-            <CodeEditor content={activeFileContent} onContentChange={handleContentChange} fileName={activeFile} />
-            <div className="relative">
+            <div className={`flex-1 flex flex-col min-w-0 ${isMobile && mobileMainView !== 'editor' ? 'hidden' : ''}`}>
+                <CodeEditor content={activeFileContent} onContentChange={handleContentChange} fileName={activeFile} />
+            </div>
+            
+            <div className="relative hidden md:block">
                 <Resizer direction="horizontal" onDrag={(dx) => setRightPanelWidth(w => Math.max(200, w - dx))} />
             </div>
-            <div style={{ width: `${rightPanelWidth}px` }} className="flex flex-col bg-gray-900/70 border-l border-gray-700/50">
+
+            <div style={{ width: isMobile ? '100%' : `${rightPanelWidth}px` }} className={`flex-col bg-gray-900/70 md:border-l border-gray-700/50 ${isMobile && mobileMainView !== 'preview' ? 'hidden' : 'flex'}`}>
               <div className="bg-gray-900/80 px-2 py-1.5 border-b border-gray-700/50 flex items-center justify-between">
                 <div className="flex items-center gap-1">
                   <button onClick={() => setActiveTab('preview')} className={`flex items-center gap-2 px-3 py-1 text-sm rounded-md ${activeTab === 'preview' ? 'bg-gray-700' : 'hover:bg-gray-800'}`}>
@@ -486,7 +533,7 @@ const App: React.FC = () => {
               type="text"
               value={message}
               onChange={(e) => setMessage(e.target.value)}
-              placeholder="Chat with Nix 1.5 or describe what you want to build..."
+              placeholder="Chat with Nix 1.5..."
               className="flex-1 bg-gray-700/50 border border-gray-600 rounded-md px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-shadow"
               onKeyDown={(e) => e.key === 'Enter' && !isLoading && handleSendMessage()}
             />
