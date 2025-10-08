@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-g" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Codenix IDE</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- JSZip for downloading files -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <style>
+      body {
+        font-family: 'Inter', sans-serif;
+      }
+      @import url('https://rsms.me/inter/inter.css');
+
+      /* Custom scrollbar for a more IDE-like feel */
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #1a202c; /* bg-gray-800 */
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #4a5568; /* bg-gray-600 */
+        border-radius: 4px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #718096; /* bg-gray-500 */
+      }
+      
+      /* Syntax Highlighting Styles */
+      .syntax-highlight .token-comment { color: #6a9955; }
+      .syntax-highlight .token-string { color: #ce9178; }
+      .syntax-highlight .token-punctuation { color: #d4d4d4; }
+      .syntax-highlight .token-tag { color: #569cd6; }
+      .syntax-highlight .token-attr-name { color: #9cdcfe; }
+      .syntax-highlight .token-attr-value { color: #ce9178; }
+      .syntax-highlight .token-keyword { color: #c586c0; }
+      .syntax-highlight .token-selector { color: #d7ba7d; }
+      .syntax-highlight .token-property { color: #9cdcfe; }
+      .syntax-highlight .token-function { color: #dcdcaa; }
+      .syntax-highlight .token-number { color: #b5cea8; }
+      .syntax-highlight .token-operator { color: #d4d4d4; }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/"
+  }
+}
+</script>
+</head>
+  <body class="bg-gray-900 text-white">
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>

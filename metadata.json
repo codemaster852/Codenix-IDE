@@ -1,0 +1,5 @@
+{
+  "name": "Codenix IDE",
+  "description": "A web-based IDE powered by the Nix 1.5 model to generate, preview, and publish web applications from a single prompt. It features a file explorer, code editor, and a live preview pane.",
+  "requestFramePermissions": []
+}
